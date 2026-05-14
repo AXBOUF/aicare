@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  aicare-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aicare-flask-app
+    ports:
+      - "5000:5000"
+    environment:
+      # Flask Configuration
+      - FLASK_ENV=production
+      - FLASK_DEBUG=false
+      - FLASK_SECRET_KEY=dev-secret-key-change-in-production
+      
+      # Azure MySQL Database
+      - AZURE_MYSQL_HOST=${AZURE_MYSQL_HOST}
+      - AZURE_MYSQL_USERNAME=${AZURE_MYSQL_USERNAME}
+      - AZURE_MYSQL_PASSWORD=${AZURE_MYSQL_PASSWORD}
+      - AZURE_MYSQL_DATABASE=${AZURE_MYSQL_DATABASE:-zenith_healthcare}
+      
+      # Azure Blob Storage
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING}
+      - AZURE_STORAGE_CONTAINER=${AZURE_STORAGE_CONTAINER:-patient-intake-forms}
+      
+      # Azure Document Intelligence
+      - DOCUMENT_INTELLIGENCE_ENDPOINT=${DOCUMENT_INTELLIGENCE_ENDPOINT}
+      - DOCUMENT_INTELLIGENCE_KEY=${DOCUMENT_INTELLIGENCE_KEY}
+      
+      # Azure AI Search
+      - AZURE_SEARCH_ENDPOINT=${AZURE_SEARCH_ENDPOINT}
+      - AZURE_SEARCH_KEY=${AZURE_SEARCH_KEY}
+      - AZURE_SEARCH_INDEX=${AZURE_SEARCH_INDEX:-patient-intake-index}
+      
+      # Azure OpenAI
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_OPENAI_KEY=${AZURE_OPENAI_KEY}
+      - AZURE_OPENAI_DEPLOYMENT=${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}
+      - AZURE_OPENAI_API_VERSION=${AZURE_OPENAI_API_VERSION:-2024-12-01-preview}
+    
+    volumes:
+      - .:/app:ro
+    networks:
+      - aicare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  aicare-network:
+    driver: bridge
