@@ -15,6 +15,8 @@ from flask import (
     Flask, render_template, request, redirect,
     url_for, flash, jsonify, session, send_from_directory,
 )
+from functools import wraps
+from werkzeug.security import generate_password_hash, check_password_hash
 from flask_cors import CORS
 from config import Config
 from services.blob_storage import BlobStorageService
@@ -67,6 +69,36 @@ openai_service = OpenAIService()
 
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def is_authenticated() -> bool:
+    return bool(session.get("user"))
+
+
+def login_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not is_authenticated():
+            # For API routes return JSON 401
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Unauthorized"}), 401
+            # For web pages redirect to login
+            return redirect(url_for("login", next=request.path))
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def admin_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not is_authenticated():
+            flash("Please log in.", "error")
+            return redirect(url_for("login", next=request.path))
+        if session.get("role") != "admin":
+            flash("Admin access required.", "error")
+            return redirect(url_for("index"))
+        return func(*args, **kwargs)
+    return wrapper
 
 
 # ──────────────────────────────────────────────────────────────
@@ -127,7 +159,162 @@ def upload_document():
         return redirect(url_for("index"))
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    """Simple username/password login using users table in MySQL."""
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        user = db_service.get_user_by_username(username)
+        if not user:
+            flash("Invalid username or password.", "error")
+            return redirect(url_for("login"))
+        if not check_password_hash(user["password_hash"], password):
+            flash("Invalid username or password.", "error")
+            return redirect(url_for("login"))
+        session["user"] = user["username"]
+        session["role"] = user.get("role", "user")
+        flash("Logged in successfully.", "success")
+        next_url = request.args.get("next") or url_for("patients")
+        return redirect(next_url)
+    
+    # Check if any users exist; if not, show bootstrap message
+    try:
+        conn = db_service._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) as count FROM users")
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        user_count = result[0] if result else 0
+    except:
+        user_count = 0
+    
+    return render_template("login.html", user_count=user_count)
+
+
+@app.route("/setup/first-user", methods=["GET", "POST"])
+def setup_first_user():
+    """Allow creating the first admin user without authentication."""
+    # Check if users already exist
+    try:
+        conn = db_service._get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) as count FROM users")
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        user_count = result[0] if result else 0
+    except:
+        user_count = 0
+    
+    if user_count > 0:
+        flash("Users already exist. Use /admin/users to manage them.", "info")
+        return redirect(url_for("login"))
+    
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        
+        if not username or not password:
+            flash("Username and password required.", "error")
+            return redirect(url_for("setup_first_user"))
+        
+        try:
+            pw_hash = generate_password_hash(password)
+            db_service.create_user(username, pw_hash, role="admin")
+            flash(f"Admin user '{username}' created! Please log in.", "success")
+            return redirect(url_for("login"))
+        except Exception as e:
+            flash(f"Error: {str(e)}", "error")
+            return redirect(url_for("setup_first_user"))
+    
+    return render_template("setup_first_user.html")
+
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    flash("Logged out.", "success")
+    return redirect(url_for("index"))
+
+
+@app.route("/admin/users", methods=["GET", "POST", "DELETE"])
+@admin_required
+def admin_users():
+    """Admin panel to manage users."""
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
+        role = request.form.get("role", "user")
+        
+        if not username or not password:
+            flash("Username and password required.", "error")
+            return redirect(url_for("admin_users"))
+        
+        existing = db_service.get_user_by_username(username)
+        if existing:
+            flash(f"User '{username}' already exists.", "error")
+            return redirect(url_for("admin_users"))
+        
+        try:
+            pw_hash = generate_password_hash(password)
+            user_id = db_service.create_user(username, pw_hash, role=role)
+            flash(f"Created user '{username}' with role '{role}'.", "success")
+        except Exception as e:
+            flash(f"Error creating user: {str(e)}", "error")
+        
+        return redirect(url_for("admin_users"))
+    
+    # GET: Show users list + create form
+    try:
+        conn = db_service._get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id, username, role, created_at FROM users ORDER BY created_at")
+        users = cursor.fetchall()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        users = []
+        flash(f"Error loading users: {str(e)}", "error")
+    
+    return render_template("admin_users.html", users=users)
+
+
+@app.route("/admin/users/<int:user_id>", methods=["DELETE", "POST"])
+@admin_required
+def delete_user_admin(user_id: int):
+    """Delete a user (admin only)."""
+    try:
+        conn = db_service._get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        
+        if not user:
+            flash("User not found.", "error")
+            return redirect(url_for("admin_users"))
+        
+        # Prevent deleting yourself
+        if user["username"] == session.get("user"):
+            flash("Cannot delete your own account.", "error")
+            return redirect(url_for("admin_users"))
+        
+        cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        flash(f"Deleted user '{user['username']}'.", "success")
+    except Exception as e:
+        flash(f"Error deleting user: {str(e)}", "error")
+    
+    return redirect(url_for("admin_users"))
+
+
 @app.route("/patients")
+@login_required
 def patients():
     """List all patient records."""
     try:
@@ -140,6 +327,7 @@ def patients():
 
 
 @app.route("/patients/<int:patient_id>")
+@login_required
 def patient_detail(patient_id: int):
     """View individual patient record with AI summary."""
     try:
@@ -155,6 +343,7 @@ def patient_detail(patient_id: int):
 
 
 @app.route("/patients/<int:patient_id>/summary")
+@login_required
 def patient_summary(patient_id: int):
     """Generate an AI summary for a patient."""
     try:
@@ -169,6 +358,7 @@ def patient_summary(patient_id: int):
 
 
 @app.route("/search")
+@login_required
 def search():
     """Search patient records via Azure AI Search."""
     query = request.args.get("q", "").strip()
@@ -187,12 +377,14 @@ def search():
 
 
 @app.route("/assistant")
+@login_required
 def assistant():
     """AI Triage Assistant chat interface."""
     return render_template("assistant.html")
 
 
 @app.route("/api/assistant", methods=["POST"])
+@login_required
 def api_assistant():
     """API endpoint for AI Triage Assistant queries."""
     data = request.get_json()
@@ -252,6 +444,7 @@ def api_upload_document():
 
 
 @app.route("/api/patients", methods=["GET"])
+@login_required
 def api_get_patients():
     """API endpoint: Get all patient records."""
     try:
@@ -266,6 +459,7 @@ def api_get_patients():
 
 
 @app.route("/api/patients/<int:patient_id>", methods=["GET"])
+@login_required
 def api_get_patient(patient_id: int):
     """API endpoint: Get single patient record."""
     try:
@@ -282,6 +476,7 @@ def api_get_patient(patient_id: int):
 
 
 @app.route("/api/patients/<int:patient_id>/summary", methods=["GET"])
+@login_required
 def api_get_patient_summary(patient_id: int):
     """API endpoint: Get AI-generated summary for patient."""
     try:
@@ -296,6 +491,7 @@ def api_get_patient_summary(patient_id: int):
 
 
 @app.route("/api/search", methods=["GET"])
+@login_required
 def api_search():
     """API endpoint: Search patient records."""
     query = request.args.get("q", "").strip()
@@ -356,6 +552,21 @@ if __name__ == "__main__":
         logger.info("Database tables initialised.")
     except Exception as e:
         logger.warning("Could not initialise database: %s", e)
+
+    # Create default admin user if provided in env and not present
+    try:
+        admin_user = os.environ.get("ADMIN_USERNAME")
+        admin_pass = os.environ.get("ADMIN_PASSWORD")
+        if admin_user and admin_pass:
+            existing = db_service.get_user_by_username(admin_user)
+            if not existing:
+                pw_hash = generate_password_hash(admin_pass)
+                db_service.create_user(admin_user, pw_hash, role="admin")
+                logger.info("Created default admin user: %s", admin_user)
+            else:
+                logger.info("Admin user already exists: %s", admin_user)
+    except Exception as e:
+        logger.warning("Failed to ensure admin user: %s", e)
 
     # Ensure search index exists
     try:

@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Users — Zenith Healthcare{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8">
+    <h2>User Management</h2>
+    <p class="text-muted">Create and manage user accounts.</p>
+
+    <!-- Create User Form -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0">Create New User</h5>
+      </div>
+      <div class="card-body">
+        <form method="post" action="{{ url_for('admin_users') }}">
+          <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" class="form-control" id="username" name="username" required>
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required>
+          </div>
+          <div class="mb-3">
+            <label for="role" class="form-label">Role</label>
+            <select class="form-select" id="role" name="role">
+              <option value="user">User (read-only)</option>
+              <option value="admin">Admin (full access)</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">Create User</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Users List -->
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Existing Users</h5>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Created</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if users %}
+              {% for user in users %}
+              <tr>
+                <td><strong>{{ user.username }}</strong></td>
+                <td>
+                  <span class="badge {% if user.role == 'admin' %}bg-danger{% else %}bg-secondary{% endif %}">
+                    {{ user.role }}
+                  </span>
+                </td>
+                <td><small class="text-muted">{{ user.created_at }}</small></td>
+                <td>
+                  {% if user.username != session.get('user') %}
+                  <form method="post" action="{{ url_for('delete_user_admin', user_id=user.id) }}" style="display:inline;">
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete {{ user.username }}?')">Delete</button>
+                  </form>
+                  {% else %}
+                  <span class="text-muted small">(you)</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-3">No users yet. Create one above.</td>
+            </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

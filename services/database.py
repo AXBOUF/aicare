@@ -33,6 +33,17 @@ CREATE TABLE IF NOT EXISTS patient_records (
 );
 """
 
+# Users table for authentication
+CREATE_USERS_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(150) UNIQUE NOT NULL,
+    password_hash VARCHAR(512) NOT NULL,
+    role VARCHAR(50) DEFAULT 'user',
+    created_at DATETIME DEFAULT (UTC_TIMESTAMP())
+);
+"""
+
 INSERT_SQL = """
 INSERT INTO patient_records
     (patient_name, date_of_birth, symptoms, existing_conditions,
@@ -66,11 +77,44 @@ class DatabaseService:
         try:
             cursor = conn.cursor()
             cursor.execute(CREATE_TABLE_SQL)
+            # Ensure users table exists for authentication
+            cursor.execute(CREATE_USERS_TABLE_SQL)
             conn.commit()
             cursor.close()
         finally:
             conn.close()
         logger.info("Database tables ensured.")
+
+    # ---------------------------
+    # User management for auth
+    # ---------------------------
+    def create_user(self, username: str, password_hash: str, role: str = "user") -> int:
+        """Insert a new user. Returns new user id."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO users (username, password_hash, role) VALUES (%s, %s, %s)",
+                (username, password_hash, role),
+            )
+            user_id = cursor.lastrowid
+            conn.commit()
+            cursor.close()
+        finally:
+            conn.close()
+        return user_id
+
+    def get_user_by_username(self, username: str) -> dict | None:
+        """Return user row by username or None."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            row = cursor.fetchone()
+            cursor.close()
+        finally:
+            conn.close()
+        return row
 
     def save_patient_record(self, patient_data: dict, blob_info: dict) -> int:
         """
