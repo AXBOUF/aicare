@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.log
+uploads/
+.DS_Store
+*.pem
+sample_data/test_documents/
+notes.txt
+.env.example

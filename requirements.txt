@@ -1,0 +1,24 @@
+# Zenith Healthcare AI Platform - Dependencies
+# Flask Web Framework
+Flask==3.1.0
+Flask-CORS==4.0.0
+Werkzeug==3.1.3
+
+# Azure SDKs
+azure-storage-blob==12.24.1
+azure-ai-formrecognizer==3.3.3
+azure-search-documents==11.6.0
+azure-identity==1.19.0
+azure-keyvault-secrets==4.9.0
+openai==1.59.9
+
+# Database
+mysql-connector-python==9.1.0
+
+# Document generation (used by scripts/student/3_generate_test_documents.py)
+reportlab>=4.0.0
+Pillow>=10.0.0
+
+# Utilities
+python-dotenv==1.0.1
+requests==2.32.3

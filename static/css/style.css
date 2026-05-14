@@ -1,0 +1,94 @@
+/* ============================================================
+   Zenith Healthcare AI Platform - Custom Styles
+   ============================================================ */
+
+/* General */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Navbar */
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.3rem;
+}
+
+/* Pipeline steps on home page */
+.pipeline-step {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    transition: transform 0.2s;
+}
+.pipeline-step:hover {
+    transform: translateY(-4px);
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 0.75rem;
+}
+.card-header {
+    border-radius: 0.75rem 0.75rem 0 0 !important;
+}
+
+/* Chat */
+.chat-container {
+    background-color: #fdfdfd;
+}
+
+.message-content {
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 4px 0;
+}
+.typing-indicator span {
+    width: 8px;
+    height: 8px;
+    background-color: #6c757d;
+    border-radius: 50%;
+    animation: typing 1.4s infinite ease-in-out;
+}
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+@keyframes typing {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+}
+
+/* Summary text */
+.summary-text {
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+/* Badge urgency colours */
+.badge.bg-danger { font-weight: 600; }
+.badge.bg-warning { font-weight: 600; }
+.badge.bg-success { font-weight: 600; }
+
+/* Progress bars for confidence scores */
+.progress {
+    border-radius: 0.5rem;
+}
+
+/* Table */
+.table th {
+    white-space: nowrap;
+}
+
+/* Footer */
+footer {
+    font-size: 0.85rem;
+}

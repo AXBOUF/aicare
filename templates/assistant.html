@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}AI Triage Assistant - Zenith Healthcare AI{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <h2 class="mb-4"><i class="bi bi-robot"></i> AI Triage Assistant</h2>
+
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>Disclaimer:</strong> This system provides informational assistance and does not replace clinical judgement.
+        </div>
+
+        <!-- Chat Container -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Clinical AI Chat</h5>
+            </div>
+            <div class="card-body p-0">
+                <div id="chatMessages" class="chat-container p-3" style="height: 450px; overflow-y: auto;">
+                    <!-- Welcome message -->
+                    <div class="chat-message assistant-message mb-3">
+                        <div class="d-flex">
+                            <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                                 style="width: 36px; height: 36px; min-width: 36px;">
+                                <i class="bi bi-robot"></i>
+                            </div>
+                            <div class="message-content bg-light p-3 rounded">
+                                <strong>Zenith AI Triage Assistant</strong>
+                                <p class="mb-1 mt-2">Hello! I can help you with:</p>
+                                <ul class="mb-1">
+                                    <li>Searching patient records by symptoms or conditions</li>
+                                    <li>Summarising patient intake information</li>
+                                    <li>Suggesting specialist referral pathways</li>
+                                    <li>Reviewing urgency classifications</li>
+                                </ul>
+                                <p class="mb-0"><em>Try asking: "Show patients with chest pain" or "What specialist referral is recommended for patient with diabetes?"</em></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Area -->
+                <div class="border-top p-3">
+                    <form id="chatForm" class="d-flex gap-2">
+                        <input type="text" class="form-control form-control-lg" id="userInput"
+                               placeholder="Ask about patient records, symptoms, referrals..."
+                               autocomplete="off" required>
+                        <button type="submit" class="btn btn-primary btn-lg px-4" id="sendBtn">
+                            <i class="bi bi-send"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Example Queries -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Example Queries</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <button class="btn btn-outline-secondary w-100 mb-2 example-query"
+                                data-query="Show patients with chest pain in last 7 days">
+                            Show patients with chest pain in last 7 days
+                        </button>
+                        <button class="btn btn-outline-secondary w-100 mb-2 example-query"
+                                data-query="What specialist referral is recommended for a patient with persistent headaches and vision problems?">
+                            Specialist referral for headaches &amp; vision problems?
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <button class="btn btn-outline-secondary w-100 mb-2 example-query"
+                                data-query="List all high urgency patients">
+                            List all high urgency patients
+                        </button>
+                        <button class="btn btn-outline-secondary w-100 mb-2 example-query"
+                                data-query="Summarise the most recent patient intake">
+                            Summarise the most recent patient intake
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const chatMessages = document.getElementById('chatMessages');
+const chatForm = document.getElementById('chatForm');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+let conversationHistory = [];
+
+// Handle form submission
+chatForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const question = userInput.value.trim();
+    if (!question) return;
+
+    addMessage('user', question);
+    userInput.value = '';
+    sendBtn.disabled = true;
+
+    // Show typing indicator
+    const typingId = addTypingIndicator();
+
+    fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            question: question,
+            history: conversationHistory.slice(-10)  // Last 10 messages for context
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        removeTypingIndicator(typingId);
+        if (data.error) {
+            addMessage('assistant', 'Sorry, an error occurred: ' + data.error);
+        } else {
+            addMessage('assistant', data.answer);
+            conversationHistory.push(
+                { role: 'user', content: question },
+                { role: 'assistant', content: data.answer }
+            );
+        }
+        sendBtn.disabled = false;
+    })
+    .catch(err => {
+        removeTypingIndicator(typingId);
+        addMessage('assistant', 'Sorry, an error occurred. Please try again.');
+        sendBtn.disabled = false;
+    });
+});
+
+// Example query buttons
+document.querySelectorAll('.example-query').forEach(btn => {
+    btn.addEventListener('click', function() {
+        userInput.value = this.dataset.query;
+        chatForm.dispatchEvent(new Event('submit'));
+    });
+});
+
+function addMessage(role, content) {
+    const div = document.createElement('div');
+    div.className = `chat-message ${role}-message mb-3`;
+
+    const icon = role === 'user' ? 'bi-person' : 'bi-robot';
+    const bgClass = role === 'user' ? 'bg-primary' : 'bg-primary';
+    const msgBg = role === 'user' ? 'bg-primary-subtle' : 'bg-light';
+
+    // Sanitise content to prevent XSS - replace HTML special characters
+    const sanitised = content
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
+
+    div.innerHTML = `
+        <div class="d-flex ${role === 'user' ? 'flex-row-reverse' : ''}">
+            <div class="avatar ${bgClass} text-white rounded-circle d-flex align-items-center justify-content-center ${role === 'user' ? 'ms-2' : 'me-2'}"
+                 style="width: 36px; height: 36px; min-width: 36px;">
+                <i class="bi ${icon}"></i>
+            </div>
+            <div class="message-content ${msgBg} p-3 rounded">
+                ${sanitised}
+            </div>
+        </div>`;
+
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function addTypingIndicator() {
+    const id = 'typing-' + Date.now();
+    const div = document.createElement('div');
+    div.id = id;
+    div.className = 'chat-message assistant-message mb-3';
+    div.innerHTML = `
+        <div class="d-flex">
+            <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2"
+                 style="width: 36px; height: 36px; min-width: 36px;">
+                <i class="bi bi-robot"></i>
+            </div>
+            <div class="message-content bg-light p-3 rounded">
+                <div class="typing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        </div>`;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return id;
+}
+
+function removeTypingIndicator(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+}
+
+// Check for pre-filled query from URL
+const urlParams = new URLSearchParams(window.location.search);
+const prefilledQuery = urlParams.get('q');
+if (prefilledQuery) {
+    userInput.value = prefilledQuery;
+    chatForm.dispatchEvent(new Event('submit'));
+}
+</script>
+{% endblock %}

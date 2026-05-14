@@ -1,0 +1,47 @@
+[
+  {
+    "patient_name": "Sarah Johnson",
+    "date_of_birth": "15/03/1985",
+    "symptoms": "Persistent chest pain radiating to left arm, shortness of breath, dizziness",
+    "existing_conditions": "Hypertension, Type 2 Diabetes",
+    "medications": "Metformin 500mg, Lisinopril 10mg",
+    "allergies": "Penicillin",
+    "referral_reason": "Urgent cardiology assessment - suspected acute coronary syndrome"
+  },
+  {
+    "patient_name": "Michael Chen",
+    "date_of_birth": "22/07/1972",
+    "symptoms": "Recurring headaches, blurred vision, neck stiffness",
+    "existing_conditions": "Migraine history, Cervical spondylosis",
+    "medications": "Sumatriptan 50mg as needed, Ibuprofen 400mg",
+    "allergies": "None known",
+    "referral_reason": "Neurology referral - increasing frequency of migraines with new visual disturbances"
+  },
+  {
+    "patient_name": "Emily Williams",
+    "date_of_birth": "08/11/1998",
+    "symptoms": "Persistent cough for 3 weeks, low-grade fever, fatigue, weight loss",
+    "existing_conditions": "Asthma (childhood)",
+    "medications": "Ventolin inhaler as needed",
+    "allergies": "Sulfa drugs",
+    "referral_reason": "Respiratory medicine referral - persistent cough with constitutional symptoms"
+  },
+  {
+    "patient_name": "Robert Thompson",
+    "date_of_birth": "30/01/1960",
+    "symptoms": "Severe lower back pain, numbness in right leg, difficulty walking",
+    "existing_conditions": "Osteoarthritis, Previous lumbar disc herniation (2018)",
+    "medications": "Paracetamol 1g QID, Naproxen 500mg BD",
+    "allergies": "Codeine (causes nausea)",
+    "referral_reason": "Orthopaedic/Neurosurgery referral - recurrent disc herniation with neurological deficit"
+  },
+  {
+    "patient_name": "Priya Patel",
+    "date_of_birth": "14/06/1990",
+    "symptoms": "Anxiety, insomnia, heart palpitations, tremor",
+    "existing_conditions": "Generalised anxiety disorder, Iron deficiency anaemia",
+    "medications": "Ferrous fumarate 210mg, Escitalopram 10mg",
+    "allergies": "Latex",
+    "referral_reason": "Endocrinology referral - rule out thyroid dysfunction"
+  }
+]
