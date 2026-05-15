@@ -11,20 +11,20 @@
     </div>
     {% endif %}
 
-    <div class="card">
+    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);">
       <div class="card-body">
-        <h3 class="card-title">Sign in</h3>
-        <p class="text-muted">Access clinical records and admin features.</p>
+        <h3 class="card-title" style="color: #ffffff; font-weight: 600;">Sign in</h3>
+        <p class="text-muted" style="color: #e0e7ff !important;">Access clinical records and admin features.</p>
         <form method="post" action="{{ url_for('login') }}">
           <div class="mb-3">
-            <label for="username" class="form-label">Username</label>
-            <input type="text" class="form-control" id="username" name="username" required>
+            <label for="username" class="form-label" style="color: #ffffff; font-weight: 500;">Username</label>
+            <input type="text" class="form-control" id="username" name="username" required style="border-color: #667eea; background-color: rgba(255, 255, 255, 0.95);">
           </div>
           <div class="mb-3">
-            <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" name="password" required>
+            <label for="password" class="form-label" style="color: #ffffff; font-weight: 500;">Password</label>
+            <input type="password" class="form-control" id="password" name="password" required style="border-color: #667eea; background-color: rgba(255, 255, 255, 0.95);">
           </div>
-          <button type="submit" class="btn btn-primary">Sign in</button>
+          <button type="submit" class="btn btn-success" style="width: 100%; background-color: #10b981; border-color: #10b981; font-weight: 600;">Sign in</button>
         </form>
       </div>
     </div>
